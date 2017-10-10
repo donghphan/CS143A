@@ -60,9 +60,13 @@ runcmd(struct cmd *cmd)
   case ' ':
     ecmd = (struct execcmd*)cmd;
     if(ecmd->argv[0] == 0)
-      exit(0);
-    fprintf(stderr, "exec not implemented\n");
+    { 
+	 exit(0);
+   	 fprintf(stderr, "exec not implemented\n");
+    }
     // Your code here ...
+    execv(ecmd->argv[0], ecmd->argv);
+    fprintf(stderr, "exec failed.\n");
     break;
 
   case '>':
@@ -90,7 +94,20 @@ getcmd(char *buf, int nbuf)
     fprintf(stdout, "143A$ ");
   memset(buf, 0, nbuf);
   fgets(buf, nbuf, stdin);
-  if(buf[0] == 0) // EOF
+  
+  
+  if(strstr(buf,"/bin") == NULL && buf[0] != 0) // If buf string does not contain the string /bin
+  {	
+	char* bin = "/bin/";  // prepend /bin/ to the command unless it's Ctrl + d command
+	char* temp;
+	temp = malloc(strlen(bin) + strlen(buf) + 1);
+	strcpy(temp, bin);
+	strcat(temp, buf);
+	
+	strcpy(buf, temp);
+	free(temp);
+  }
+  else if(buf[0] == 0) // EOF
     return -1;
   return 0;
 }
