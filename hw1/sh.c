@@ -65,22 +65,65 @@ runcmd(struct cmd *cmd)
    	 fprintf(stderr, "exec not implemented\n");
     }
     // Your code here ...
+    if(strstr(ecmd->argv[0],"/bin") == NULL)
+    {	
+      	char* bin = "/bin/";  // prepend /bin/ to the command unless it's Ctrl + d command
+      	char* temp;
+	temp = malloc(strlen(bin) + strlen(ecmd->argv[0]) + 1);
+	strcpy(temp, bin);
+	strcat(temp, ecmd->argv[0]);
+       
+	strcpy(ecmd->argv[0], temp);
+	free(temp);
+    }													
+
     execv(ecmd->argv[0], ecmd->argv);
-    fprintf(stderr, "exec failed.\n");
+    fprintf(stderr, "exec %d failed.\n", ecmd->argv[0]);
     break;
 
   case '>':
   case '<':
     rcmd = (struct redircmd*)cmd;
-    fprintf(stderr, "redir not implemented\n");
+    //fprintf(stderr, "redir not implemented\n");
     // Your code here ...
+    close(rcmd->fd);
+    int fd = open(rcmd->file, rcmd->mode, 0666);
+    if(fd < 0)
+    {
+	fprintf(stderr, "open %d failed.\n", rcmd->file);
+    }
+
     runcmd(rcmd->cmd);
     break;
 
   case '|':
     pcmd = (struct pipecmd*)cmd;
-    fprintf(stderr, "pipe not implemented\n");
+    //fprintf(stderr, "pipe not implemented\n");
     // Your code here ...
+    int p[2];
+    pipe(p);
+  
+    if (fork() == 0)
+    {
+	close(1);
+        dup(p[1]);
+	close(p[0]);
+	close(p[1]);
+	runcmd(pcmd->left);
+    }
+    if (fork() == 0)
+    {
+	close(0);
+	dup(p[0]);
+	close(p[0]);
+	close(p[1]);
+	runcmd(pcmd->right);
+    }
+    close(p[0]);
+    close(p[1]);
+    wait(0);
+    wait(0);
+
     break;
   }    
   exit(0);
@@ -94,20 +137,8 @@ getcmd(char *buf, int nbuf)
     fprintf(stdout, "143A$ ");
   memset(buf, 0, nbuf);
   fgets(buf, nbuf, stdin);
-  
-  
-  if(strstr(buf,"/bin") == NULL && buf[0] != 0) // If buf string does not contain the string /bin
-  {	
-	char* bin = "/bin/";  // prepend /bin/ to the command unless it's Ctrl + d command
-	char* temp;
-	temp = malloc(strlen(bin) + strlen(buf) + 1);
-	strcpy(temp, bin);
-	strcat(temp, buf);
-	
-	strcpy(buf, temp);
-	free(temp);
-  }
-  else if(buf[0] == 0) // EOF
+
+  if(buf[0] == 0) // EOF
     return -1;
   return 0;
 }
